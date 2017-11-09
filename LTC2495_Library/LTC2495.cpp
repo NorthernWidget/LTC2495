@@ -51,6 +51,11 @@ float LTC2495::GetVoltageDiff(int Pin1, int Pin2)
   char Byte2 = 0x80;
   float Voltage = 0;
 
+  if(Byte1 == 0) { //If the pins are not adjacent, return pseudo differential read between two pins (NOT same as true diffierential)
+    Voltage = GetVoltage(Pin1) - GetVoltage(Pin2);
+    return Voltage;
+  }
+
   GetData(Byte1, Byte2);
 
   OverFlow = (DataA >> 7) & ((DataA >> 6) & 0x01); //Set overflow bit if out of FS range NOTE: IMPROVE SETTING OF BIT
