@@ -3,10 +3,12 @@
 #include <Wire.h>
 
 
-LTC2495::LTC2495(int _ADR, float _RefVoltage)
+LTC2495::LTC2495(int _ADR, float _RefVoltage, int _RefPin, float _RefVal)
 {
   ADR = _ADR; 
   RefVoltage = _RefVoltage; //Define global ref voltage 
+  RefPin = _RefPin;
+  RefVal = _RefVal;
   Wire.begin();  
 }
 
@@ -45,16 +47,37 @@ float LTC2495::GetVoltage(int Pin)
   }
 }
 
+float LTC2495::GetVoltageComp(int Pin)
+{
+  char Byte1 = GetPin(Pin);
+  char Byte2 = 0x80;
+  GetData(Byte1, Byte2);
+
+  OverFlow = (DataA >> 7) & ((DataA >> 6) & 0x01); //Set overflow bit if out of FS range NOTE: IMPROVE SETTING OF BIT
+  SignBit = (DataA >> 7) & 0x01;
+  signed int VoltageNum = (((DataA & 0x3F) << 10) | (DataB << 2) | (DataC >> 6))/2; //Get raw ADC result
+
+  float CompVal = GetVoltage(RefPin);
+  float RefComp = RefVal/CompVal;
+  float Voltage = 0;
+
+  if(OverFlow) return RefVoltage/2.0;
+  else if(SignBit) {
+
+    Voltage = ((float(VoltageNum)/65536.0)*float(RefVoltage) + RefVoltage/2)*RefComp;
+    return Voltage;
+  }
+  else{
+    Voltage = (float(VoltageNum)/65536.0)*float(RefVoltage)*RefComp;  //Calculate actual voltage 
+    return Voltage;
+  }
+}
+
 float LTC2495::GetVoltageDiff(int Pin1, int Pin2)
 {
   char Byte1 = GetPin(Pin1, Pin2);
   char Byte2 = 0x80;
   float Voltage = 0;
-
-  if(Byte1 == 0) { //If the pins are not adjacent, return pseudo differential read between two pins (NOT same as true diffierential)
-    Voltage = GetVoltage(Pin1) - GetVoltage(Pin2);
-    return Voltage;
-  }
 
   GetData(Byte1, Byte2);
 
