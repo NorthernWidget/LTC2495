@@ -1,17 +1,42 @@
+/*
+  Demo for LTC2495 ADC on board the ALog v3.0.0 and the TLog
+  This code reads out the data from the ADC to the serial monitor, both raw 
+  and compensated values (compensated using the on board voltage referance) 
+  this code also displays the battery voltage (only applicable if there is a voltage \
+  on the raw input or the Batt line, otherwise will read ~0.4v is powered over USB)
+  and the referance voltage (just for reduandancy)
+
+  To see both the compensated and uncompenated voltages printed out, uncomment the "EXPERT_MODE" line below
+
+  Note: if there is nothing connected to a pin on the ADC, it will read as approximately VRef/2, this is an affect
+  of the sigma delta modulation. This will not be seen on pins A0-A5 on the TLog if the pull down resistors are enabled, 
+  these pins will read as 0.
+ 
+  This example code is in the public domain.
+  Developed by Bobby Schulz at the University of Minnesota Twin Cities and Northern Widget LLC
+
+  "In the mastery of modern electronics, never imagine that you can afford to 
+  leave it to someone else to understand the analog world, or, conversely the digital world"
+  -Barrie Gilbert, Analog Devices Engineer 
+ */
+ 
+
 #include <Arduino.h>
 #include <Wire.h>
 #include "LTC2495.h"
 
-#if defined(TLOG_PINOUT)
-#include <SparkFunSX1509.h> // Include SX1509 library
+//#define EXPERT_MODE //Uncomment this line to see raw voltage printed out
+
+#if defined(TLOG_PINOUT) //Use for TLog pinout
+#include <SparkFunSX1509.h> // Include IO expander library
 const byte SX1509_ADDRESS = 0x3E;  // SX1509 I2C address
-SX1509 io; // Create an SX1509 object to be used throughout
+SX1509 io; // Create an IO expander objecy
 #endif
 
 //No need to change if using either TLog or ALog
 //If using custom board setup, change address, Vcc, voltage ref pin, and voltage ref value
 LTC2495 adc = LTC2495(0x45, 5.0, 15, 1.8); //Initialize the LTC2495 ADC module with addres, voltage range, voltage referance pin, and value of voltage referance
-float BattDiv = 0.1; //Voltage divder used to measure battery input voltage on TLogv1
+float BattDiv = 0.1; //Voltage divder used to measure battery input voltage on TLog v1.0
 
 void setup() {
   Serial.begin(38400); //Initalize Serial comunication at 38400 bps
@@ -47,8 +72,14 @@ void loop() {
       Serial.print("Pin "); Serial.print(i);
       Serial.print(": Comp = ");
       Serial.print(Val, 5); Serial.print("V");
+
+      #if defined(EXPERT_MODE) //Only print out raw voltage in expert mode
       Serial.print(" Raw = ");
       Serial.print(Raw, 5); Serial.print("V\n");
+      #else
+      Serial.print("\n");
+      #endif
+      
     }
     
     float BatVoltage = adc.GetVoltage(14);
